@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProGen - Ultimate Realtor Engine V19 (Native 4K Canvas Engine)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=Montserrat:wght@300;400;600;700;800;900&family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #020617; font-family: 'Inter', sans-serif; overflow: hidden; margin: 0; user-select: none; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .panel-section { background: #0f172a; border-radius: 12px; padding: 16px; margin-bottom: 16px; border: 1px solid #1e293b; }
+        .input-dark { background: #020617; border: 1px solid #334155; color: white; padding: 10px 12px; border-radius: 6px; width: 100%; font-size: 13px; outline: none; margin-top: 4px; }
+        .input-dark:focus { border-color: #3b82f6; }
+        .label-dark { display: block; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #94a3b8; letter-spacing: 0.05em; }
+        .slider-sm { -webkit-appearance: none; width: 100%; height: 4px; border-radius: 2px; background: #334155; outline: none; margin-top: 8px; }
+        .slider-sm::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #3b82f6; cursor: pointer; }
+        .color-picker { -webkit-appearance: none; border: none; width: 32px; height: 32px; border-radius: 50%; overflow: hidden; cursor: pointer; padding: 0; background: transparent; }
+        .color-picker::-webkit-color-swatch-wrapper { padding: 0; }
+        .color-picker::-webkit-color-swatch { border: 2px solid #334155; border-radius: 50%; }
+        
+        .zoom-controls {
+            position: absolute;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(10px);
+            border: 1px solid #334155;
+            padding: 8px 18px;
+            border-radius: 9999px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            z-index: 100;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+        }
+        .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div style="position:fixed; left:-9999px; top:-9999px; opacity:0; pointer-events:none;">
+        <span style="font-family:'Montserrat'; font-weight:700;">ProGen</span>
+        <span style="font-family:'Montserrat'; font-weight:800;">ProGen</span>
+        <span style="font-family:'Montserrat'; font-weight:900;">ProGen</span>
+        <span style="font-family:'Playfair Display'; font-weight:700;">ProGen</span>
+        <span style="font-family:'Playfair Display'; font-weight:900;">ProGen</span>
+        <span style="font-family:'Oswald'; font-weight:700;">ProGen</span>
+        <span style="font-family:'Inter'; font-weight:700;">ProGen</span>
+    </div>
+
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useCallback } = React;
+
+        const PRESETS = {
+            luxury: {
+                name: 'Luxury Elite',
+                texts: {
+                    status: { x: 50, y: 12, size: 20, color: '#d4af37', bg: '#0f172a', font: 'Montserrat', shadow: 15, spacing: 4 },
+                    price: { x: 50, y: 56, size: 135, color: '#ffffff', bg: 'transparent', font: 'Playfair Display', shadow: 15, spacing: 0 },
+                    address: { x: 50, y: 69, size: 26, color: '#ffffff', bg: 'transparent', font: 'Montserrat', shadow: 10, spacing: 2 },
+                    features: { x: 50, y: 75, size: 19, color: '#d4af37', bg: 'transparent', font: 'Montserrat', shadow: 8, spacing: 3 },
+                    cta: { x: 50, y: 83, size: 15, color: '#ffffff', bg: 'transparent', font: 'Montserrat', shadow: 8, spacing: 3 }
+                },
+                overlayColor: '#000000',
+                overlayOpacity: 55,
+                overlayType: 'gradient',
+                badgeColor: '#ffffff',
+                socialsColor: '#ffffff',
+                socialsPos: { x: 50, y: 95 }
+            },
+            glass: {
+                name: 'Glassmorphism',
+                texts: {
+                    status: { x: 50, y: 26, size: 20, color: '#ffffff', bg: '#2563eb', font: 'Montserrat', shadow: 10, spacing: 3 },
+                    price: { x: 50, y: 44, size: 120, color: '#ffffff', bg: 'transparent', font: 'Montserrat', shadow: 12, spacing: 0 },
+                    address: { x: 50, y: 56, size: 24, color: '#ffffff', bg: 'transparent', font: 'Inter', shadow: 8, spacing: 2 },
+                    features: { x: 50, y: 62, size: 18, color: '#f8fafc', bg: 'transparent', font: 'Inter', shadow: 8, spacing: 2 },
+                    cta: { x: 50, y: 73, size: 16, color: '#0f172a', bg: '#ffffff', font: 'Montserrat', shadow: 10, spacing: 2 }
+                },
+                overlayColor: '#0f172a',
+                overlayOpacity: 25,
+                overlayType: 'solid',
+                badgeColor: '#ffffff',
+                socialsColor: '#ffffff',
+                socialsPos: { x: 50, y: 95 }
+            },
+            dominant: {
+                name: 'Agent Dominant',
+                texts: {
+                    status: { x: 32, y: 18, size: 20, color: '#ffffff', bg: '#ef4444', font: 'Montserrat', shadow: 10, spacing: 3 },
+                    price: { x: 32, y: 56, size: 115, color: '#ffffff', bg: 'transparent', font: 'Oswald', shadow: 15, spacing: 0 },
+                    address: { x: 32, y: 69, size: 23, color: '#ffffff', bg: 'transparent', font: 'Montserrat', shadow: 10, spacing: 1 },
+                    features: { x: 32, y: 75, size: 18, color: '#fca5a5', bg: 'transparent', font: 'Inter', shadow: 8, spacing: 2 },
+                    cta: { x: 32, y: 83, size: 15, color: '#0f172a', bg: '#ffffff', font: 'Montserrat', shadow: 10, spacing: 2 }
+                },
+                overlayColor: '#000000',
+                overlayOpacity: 45,
+                overlayType: 'gradient',
+                badgeColor: '#ffffff',
+                socialsColor: '#ffffff',
+                socialsPos: { x: 54, y: 95 }
+            },
+            modern: {
+                name: 'Modern Split',
+                texts: {
+                    status: { x: 75, y: 24, size: 18, color: '#ffffff', bg: '#0f172a', font: 'Montserrat', shadow: 0, spacing: 3 },
+                    price: { x: 75, y: 43, size: 82, color: '#0f172a', bg: 'transparent', font: 'Montserrat', shadow: 0, spacing: 0 },
+                    address: { x: 75, y: 54, size: 19, color: '#334155', bg: 'transparent', font: 'Montserrat', shadow: 0, spacing: 1 },
+                    features: { x: 75, y: 60, size: 16, color: '#64748b', bg: 'transparent', font: 'Inter', shadow: 0, spacing: 1 },
+                    cta: { x: 75, y: 72, size: 16, color: '#ffffff', bg: '#2563eb', font: 'Montserrat', shadow: 8, spacing: 2 }
+                },
+                overlayColor: '#000000',
+                overlayOpacity: 20,
+                overlayType: 'gradient',
+                badgeColor: '#0f172a',
+                socialsColor: '#0f172a',
+                socialsPos: { x: 75, y: 95 }
+            },
+            elegant: {
+                name: 'Elegant Frame',
+                texts: {
+                    status: { x: 50, y: 15, size: 20, color: '#ffffff', bg: '#0f172a', font: 'Montserrat', shadow: 8, spacing: 4 },
+                    price: { x: 50, y: 46, size: 135, color: '#ffffff', bg: 'transparent', font: 'Playfair Display', shadow: 15, spacing: 0 },
+                    address: { x: 50, y: 59, size: 25, color: '#ffffff', bg: 'transparent', font: 'Montserrat', shadow: 10, spacing: 3 },
+                    features: { x: 50, y: 66, size: 18, color: '#e2e8f0', bg: 'transparent', font: 'Montserrat', shadow: 8, spacing: 2 },
+                    cta: { x: 50, y: 78, size: 16, color: '#0f172a', bg: '#ffffff', font: 'Montserrat', shadow: 10, spacing: 2 }
+                },
+                overlayColor: '#000000',
+                overlayOpacity: 40,
+                overlayType: 'solid',
+                badgeColor: '#ffffff',
+                socialsColor: '#ffffff',
+                socialsPos: { x: 50, y: 92 }
+            },
+            banner: {
+                name: 'Bold Banner',
+                texts: {
+                    status: { x: 50, y: 7, size: 26, color: '#ffffff', bg: 'transparent', font: 'Montserrat', shadow: 0, spacing: 4 },
+                    price: { x: 50, y: 78, size: 110, color: '#ffffff', bg: 'transparent', font: 'Oswald', shadow: 0, spacing: 0 },
+                    address: { x: 50, y: 86, size: 22, color: '#e2e8f0', bg: 'transparent', font: 'Inter', shadow: 0, spacing: 2 },
+                    features: { x: 50, y: 91, size: 16, color: '#38bdf8', bg: 'transparent', font: 'Inter', shadow: 0, spacing: 2 },
+                    cta: { x: 50, y: 20, size: 16, color: '#ffffff', bg: '#2563eb', font: 'Montserrat', shadow: 10, spacing: 2 }
+                },
+                overlayColor: '#000000',
+                overlayOpacity: 0,
+                overlayType: 'none',
+                badgeColor: '#ffffff',
+                socialsColor: '#ffffff',
+                socialsPos: { x: 50, y: 96 }
+            },
+            polaroid: {
+                name: 'Polaroid Style',
+                texts: {
+                    status: { x: 50, y: 12, size: 20, color: '#ffffff', bg: '#ef4444', font: 'Montserrat', shadow: 10, spacing: 2 },
+                    price: { x: 50, y: 81, size: 95, color: '#0f172a', bg: 'transparent', font: 'Montserrat', shadow: 0, spacing: 0 },
+                    address: { x: 50, y: 88, size: 21, color: '#334155', bg: 'transparent', font: 'Inter', shadow: 0, spacing: 1 },
+                    features: { x: 50, y: 92, size: 16, color: '#64748b', bg: 'transparent', font: 'Inter', shadow: 0, spacing: 1 },
+                    cta: { x: 82, y: 83, size: 14, color: '#ffffff', bg: '#0f172a', font: 'Montserrat', shadow: 0, spacing: 2 }
+                },
+                overlayColor: '#000000',
+                overlayOpacity: 0,
+                overlayType: 'none',
+                badgeColor: '#0f172a',
+                socialsColor: '#0f172a',
+                socialsPos: { x: 50, y: 97 }
+            },
+            gradient: {
+                name: 'Vibrant Gradient',
+                texts: {
+                    status: { x: 22, y: 14, size: 19, color: '#0f172a', bg: '#ffffff', font: 'Montserrat', shadow: 10, spacing: 3 },
+                    price: { x: 50, y: 48, size: 135, color: '#ffffff', bg: 'transparent', font: 'Montserrat', shadow: 15, spacing: 0 },
+                    address: { x: 50, y: 62, size: 26, color: '#ffffff', bg: 'transparent', font: 'Inter', shadow: 10, spacing: 2 },
+                    features: { x: 50, y: 69, size: 19, color: '#e0f2fe', bg: 'transparent', font: 'Inter', shadow: 6, spacing: 2 },
+                    cta: { x: 50, y: 80, size: 16, color: '#0f172a', bg: '#ffffff', font: 'Montserrat', shadow: 12, spacing: 2 }
+                },
+                overlayColor: '#3b82f6',
+                overlayOpacity: 75,
+                overlayType: 'vibrant',
+                badgeColor: '#ffffff',
+                socialsColor: '#ffffff',
+                socialsPos: { x: 50, y: 95 }
+            }
+        };
+
+        function drawRoundedRect(ctx, x, y, w, h, r) {
+            const radius = Math.min(r, w / 2, h / 2);
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.arcTo(x + w, y, x + w, y + h, radius);
+            ctx.arcTo(x + w, y + h, x, y + h, radius);
+            ctx.arcTo(x, y + h, x, y, radius);
+            ctx.arcTo(x, y, x + w, y, radius);
+            ctx.closePath();
+        }
+
+        function measureTrackedText(ctx, text, spacing) {
+            const str = String(text || '');
+            if (!str.length) return { width: 0, ascent: 0, descent: 0 };
+            const chars = Array.from(str);
+            let totalWidth = 0;
+            chars.forEach((ch, idx) => {
+                totalWidth += ctx.measureText(ch).width;
+                if (idx < chars.length - 1) totalWidth += spacing;
+            });
+            const fullMetrics = ctx.measureText(str);
+            const fontSizeMatch = ctx.font.match(/(\d+(?:\.\d+)?)px/);
+            const fontSize = fontSizeMatch ? parseFloat(fontSizeMatch[1]) : 24;
+            const ascent = fullMetrics.actualBoundingBoxAscent || fontSize * 0.74;
+            const descent = fullMetrics.actualBoundingBoxDescent !== undefined ? fullMetrics.actualBoundingBoxDescent : fontSize * 0.18;
+            return { width: totalWidth, ascent, descent };
+        }
+
+        function fillTrackedText(ctx, text, x, baselineY, spacing, align = 'center') {
+            const str = String(text || '');
+            if (!str.length) return;
+            const chars = Array.from(str);
+            const { width } = measureTrackedText(ctx, str, spacing);
+            let currentX = align === 'center' ? x - width / 2 : x;
+            const prevAlign = ctx.textAlign;
+            const prevBase = ctx.textBaseline;
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'alphabetic';
+            chars.forEach((ch) => {
+                ctx.fillText(ch, currentX, baselineY);
+                currentX += ctx.measureText(ch).width + spacing;
+            });
+            ctx.textAlign = prevAlign;
+            ctx.textBaseline = prevBase;
+        }
+
+        function drawImageCover(ctx, img, destX, destY, destW, destH) {
+            if (!img || !img.width || !img.height) return;
+            const imgRatio = img.width / img.height;
+            const destRatio = destW / destH;
+            let sWidth = img.width;
+            let sHeight = img.height;
+            let sx = 0;
+            let sy = 0;
+
+            if (imgRatio > destRatio) {
+                sWidth = img.height * destRatio;
+                sx = (img.width - sWidth) / 2;
+            } else {
+                sHeight = img.width / destRatio;
+                sy = (img.height - sHeight) / 2;
+            }
+            ctx.drawImage(img, sx, sy, sWidth, sHeight, destX, destY, destW, destH);
+        }
+
+        function drawInstaIconCanvas(ctx, x, centerY, size, color) {
+            ctx.save();
+            ctx.translate(x, centerY - size / 2);
+            const scale = size / 24;
+            ctx.scale(scale, scale);
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            drawRoundedRect(ctx, 2, 2, 20, 20, 5);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.arc(12, 12, 4, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(17.5, 6.5, 1.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawTiktokIconCanvas(ctx, x, centerY, size, color) {
+            ctx.save();
+            ctx.translate(x, centerY - size / 2);
+            const scale = size / 24;
+            ctx.scale(scale, scale);
+            const p = new Path2D("M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5");
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke(p);
+            ctx.restore();
+        }
+
+        function drawFbIconCanvas(ctx, x, centerY, size, color) {
+            ctx.save();
+            ctx.translate(x, centerY - size / 2);
+            const scale = size / 24;
+            ctx.scale(scale, scale);
+            const p = new Path2D("M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z");
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2.2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke(p);
+            ctx.restore();
+        }
+
+        function drawEHOBadgeCanvas(ctx, x, y, size, color) {
+            ctx.save();
+            ctx.translate(x, y);
+            const scale = size / 100;
+            ctx.scale(scale, scale);
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.92;
+            const p = new Path2D("M50 10L10 40h10v50h60V40h10L50 10zm-5 65v-20h10v20H45z");
+            ctx.fill(p);
+            ctx.fillRect(35, 43, 30, 6);
+            ctx.restore();
+        }
+
+        function drawRealtorBadgeCanvas(ctx, x, y, size, color) {
+            ctx.save();
+            ctx.translate(x, y);
+            const scale = size / 100;
+            ctx.scale(scale, scale);
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.92;
+            const p = new Path2D("M50 0C22.4 0 0 22.4 0 50s22.4 50 50 50 50-22.4 50-50S77.6 0 50 0zm25 75H25V25h50v50zM35 35h15c5.5 0 10 4.5 10 10 0 4.2-2.6 7.8-6.3 9.3l7.3 10.7H49l-6.5-10h-7.5v10H35V35zm10 10v-5h-5v5h5z");
+            ctx.fill(p);
+            ctx.restore();
+        }
+
+        function useLocalStorage(key, initialValue) {
+            const [storedValue, setStoredValue] = useState(() => {
+                try {
+                    const item = window.localStorage.getItem(key);
+                    return item ? JSON.parse(item) : initialValue;
+                } catch (error) { return initialValue; }
+            });
+            const setValue = (value) => {
+                try {
+                    const valueToStore = value instanceof Function ? value(storedValue) : value;
+                    setStoredValue(valueToStore);
+                    window.localStorage.setItem(key, JSON.stringify(valueToStore));
+                } catch (error) { console.error(error); }
+            };
+            return [storedValue, setValue];
+        }
+
+        function App() {
+            // VIP PIN GATE STATE
+            const [isAuthenticated, setIsAuthenticated] = useLocalStorage('pg_auth_vip', false);
+            const [pinInput, setPinInput] = useState('');
+            const [pinError, setPinError] = useState(false);
+            const CORRECT_PIN = "PROGEN2026";
+
+            const [texts, setTexts] = useState({
+                status: { val: 'JUST LISTED', ...PRESETS.luxury.texts.status, show: true },
+                price: { val: '$1,250,000', ...PRESETS.luxury.texts.price, show: true },
+                address: { val: '456 SKYLINE BLVD, LOS ANGELES', ...PRESETS.luxury.texts.address, show: true },
+                features: { val: '4 BEDS • 3 BATHS • 3,200 SQFT', ...PRESETS.luxury.texts.features, show: true },
+                cta: { val: 'LINK IN BIO', ...PRESETS.luxury.texts.cta, show: true }
+            });
+
+            const [settings, setSettings] = useState({
+                layout: 'luxury', size: 'post',
+                agentName: 'JOHN SMITH', brokerage: 'PREMIER REALTY',
+                showAgentName: true, showBrokerage: true
+            });
+
+            const [overlay, setOverlay] = useState({
+                color: '#000000', opacity: 55, type: 'gradient'
+            });
+
+            const [media, setMedia] = useState({
+                bgSrc: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80',
+                bgZoom: 100, bgX: 50, bgY: 50,
+                agentSrc: '', showAgent: false, agentZoom: 100, agentX: 68, agentY: 0,
+                logoSrc: '', showLogo: false, logoZoom: 100, logoX: 85, logoY: 82 
+            });
+
+            const [badges, setBadges] = useState({
+                eho: true, realtor: true,
+                color: '#ffffff',
+                badgeZoom: 100, badgeX: 86, badgeY: 92 
+            });
+
+            const [socials, setSocials] = useState({
+                show: true, insta: true, fb: true, tiktok: true,
+                handle: '@realtor.pro', color: '#ffffff',
+                size: 24, x: 50, y: 95
+            });
+
+            const [savedTemplates, setSavedTemplates] = useState([]);
+            const [activeMenu, setActiveMenu] = useState('templates');
+            const [activeTextEdit, setActiveTextEdit] = useState('status');
+            const [isExporting, setIsExporting] = useState(false);
+            const [fontsReadyTick, setFontsReadyTick] = useState(0);
+            
+            const [previewScale, setPreviewScale] = useState(0.45); 
+            const [userZoom, setUserZoom] = useState(1.1); 
+
+            const previewCanvasRef = useRef(null);
+            const bgImageObjRef = useRef(null);
+            const agentImageObjRef = useRef(null);
+            const logoImageObjRef = useRef(null);
+            const [imageLoadTick, setImageLoadTick] = useState(0);
+
+            useEffect(() => {
+                try {
+                    const loaded = localStorage.getItem('progen_saved_templates_v19');
+                    if (loaded) setSavedTemplates(JSON.parse(loaded));
+                } catch(e){}
+                
+                const handleResize = () => {
+                    const h = window.innerHeight;
+                    if(h < 800) setPreviewScale(0.35);
+                    else if(h < 1000) setPreviewScale(0.45);
+                    else setPreviewScale(0.55);
+                };
+                window.addEventListener('resize', handleResize);
+                handleResize();
+
+                if (document.fonts && document.fonts.ready) {
+                    document.fonts.ready.then(() => {
+                        setFontsReadyTick(t => t + 1);
+                    });
+                }
+                return () => window.removeEventListener('resize', handleResize);
+            }, []);
+
+            useEffect(() => {
+                if (!media.bgSrc) {
+                    bgImageObjRef.current = null;
+                    setImageLoadTick(t => t + 1);
+                    return;
+                }
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    bgImageObjRef.current = img;
+                    setImageLoadTick(t => t + 1);
+                };
+                img.src = media.bgSrc;
+            }, [media.bgSrc]);
+
+            useEffect(() => {
+                if (!media.agentSrc) {
+                    agentImageObjRef.current = null;
+                    setImageLoadTick(t => t + 1);
+                    return;
+                }
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    agentImageObjRef.current = img;
+                    setImageLoadTick(t => t + 1);
+                };
+                img.src = media.agentSrc;
+            }, [media.agentSrc]);
+
+            useEffect(() => {
+                if (!media.logoSrc) {
+                    logoImageObjRef.current = null;
+                    setImageLoadTick(t => t + 1);
+                    return;
+                }
+                const img = new Image();
+                img.crossOrigin = "anonymous";
+                img.onload = () => {
+                    logoImageObjRef.current = img;
+                    setImageLoadTick(t => t + 1);
+                };
+                img.src = media.logoSrc;
+            }, [media.logoSrc]);
+
+            const renderSceneToCanvas = useCallback((canvas, scaleFactor = 1) => {
+                if (!canvas) return;
+                const W = 1080;
+                const H = settings.size === 'post' ? 1080 : 1920;
+
+                canvas.width = W * scaleFactor;
+                canvas.height = H * scaleFactor;
+
+                const ctx = canvas.getContext('2d');
+                ctx.save();
+                ctx.scale(scaleFactor, scaleFactor);
+
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, W, H);
+
+                const zoom = media.bgZoom / 100;
+                const drawW = W * zoom;
+                const drawH = H * zoom;
+                const bgLeftPct = media.bgX - (media.bgZoom / 2) + ((50 - media.bgX) * ((media.bgZoom - 100) / 100));
+                const bgTopPct = media.bgY - (media.bgZoom / 2) + ((50 - media.bgY) * ((media.bgZoom - 100) / 100));
+                const drawX = (bgLeftPct / 100) * W;
+                const drawY = (bgTopPct / 100) * H;
+
+                if (bgImageObjRef.current) {
+                    drawImageCover(ctx, bgImageObjRef.current, drawX, drawY, drawW, drawH);
+                } else {
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(0, 0, W, H);
+                }
+
+                if (overlay.type !== 'none' && overlay.opacity > 0) {
+                    const op = overlay.opacity / 100;
+                    let r = 0, g = 0, b = 0;
+                    if (overlay.color && overlay.color.length === 7) {
+                        r = parseInt(overlay.color.slice(1,3), 16);
+                        g = parseInt(overlay.color.slice(3,5), 16);
+                        b = parseInt(overlay.color.slice(5,7), 16);
+                    }
+                    if (overlay.type === 'solid') {
+                        ctx.fillStyle = `rgba(${r},${g},${b},${op})`;
+                        ctx.fillRect(0, 0, W, H);
+                    } else if (overlay.type === 'gradient') {
+                        const grad = ctx.createLinearGradient(0, H, 0, 0);
+                        grad.addColorStop(0, `rgba(${r},${g},${b},${Math.min(1, op + 0.35)})`);
+                        grad.addColorStop(0.45, `rgba(${r},${g},${b},${op})`);
+                        grad.addColorStop(1, `rgba(${r},${g},${b},0)`);
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(0, 0, W, H);
+                    } else if (overlay.type === 'vibrant') {
+                        const grad = ctx.createLinearGradient(0, 0, W, H);
+                        grad.addColorStop(0, `rgba(37,99,235,${op})`);
+                        grad.addColorStop(1, `rgba(219,39,119,${op})`);
+                        ctx.fillStyle = grad;
+                        ctx.fillRect(0, 0, W, H);
+                    }
+                }
+
+                if (settings.layout === 'glass') {
+                    const gx = W * 0.06;
+                    const gy = H * 0.16;
+                    const gw = W * 0.88;
+                    const gh = H * 0.66;
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(0,0,0,0.45)';
+                    ctx.shadowBlur = 45;
+                    ctx.shadowOffsetY = 20;
+                    drawRoundedRect(ctx, gx, gy, gw, gh, 36);
+                    ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';
+                    ctx.fill();
+                    ctx.restore();
+
+                    ctx.save();
+                    drawRoundedRect(ctx, gx, gy, gw, gh, 36);
+                    ctx.clip();
+                    if (bgImageObjRef.current) {
+                        ctx.filter = `blur(${18 * scaleFactor}px)`;
+                        drawImageCover(ctx, bgImageObjRef.current, drawX, drawY, drawW, drawH);
+                        ctx.filter = 'none';
+                    }
+                    const glassGrad = ctx.createLinearGradient(gx, gy, gx + gw, gy + gh);
+                    glassGrad.addColorStop(0, 'rgba(255, 255, 255, 0.26)');
+                    glassGrad.addColorStop(1, 'rgba(15, 23, 42, 0.52)');
+                    ctx.fillStyle = glassGrad;
+                    ctx.fillRect(gx, gy, gw, gh);
+                    ctx.restore();
+
+                    ctx.save();
+                    drawRoundedRect(ctx, gx, gy, gw, gh, 36);
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.lineWidth = 2.5;
+                    ctx.stroke();
+                    ctx.restore();
+                }
+
+                if (settings.layout === 'modern') {
+                    ctx.save();
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)';
+                    ctx.shadowBlur = 40;
+                    ctx.shadowOffsetX = -15;
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(W * 0.5, 0, W * 0.5, H);
+                    ctx.restore();
+                }
+
+                if (settings.layout === 'elegant') {
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+                    ctx.lineWidth = 3.5;
+                    ctx.strokeRect(38, 38, W - 76, H - 76);
+                    ctx.restore();
+                }
+
+                if (settings.layout === 'banner') {
+                    ctx.save();
+                    ctx.fillStyle = '#0f172a';
+                    ctx.shadowColor = 'rgba(0,0,0,0.45)';
+                    ctx.shadowBlur = 30;
+                    ctx.fillRect(0, 0, W, H * 0.14);
+                    ctx.fillRect(0, H * 0.72, W, H * 0.28);
+                    ctx.restore();
+                }
+
+                if (settings.layout === 'polaroid') {
+                    ctx.save();
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, W, 32); 
+                    ctx.fillRect(0, 0, 32, H); 
+                    ctx.fillRect(W - 32, 0, 32, H); 
+                    ctx.fillRect(0, H - 275, W, 275); 
+                    ctx.restore();
+                }
+
+                if (media.showAgent && agentImageObjRef.current) {
+                    const agImg = agentImageObjRef.current;
+                    const targetAgH = 820 * (media.agentZoom / 100);
+                    const agRatio = agImg.width / agImg.height;
+                    const targetAgW = targetAgH * agRatio;
+                    const agCenterX = (media.agentX / 100) * W;
+                    const agBottomY = H - (media.agentY / 100) * H;
+                    ctx.save();
+                    ctx.drawImage(agImg, agCenterX - targetAgW / 2, agBottomY - targetAgH, targetAgW, targetAgH);
+                    ctx.restore();
+                }
+
+                Object.keys(texts).forEach(key => {
+                    const t = texts[key];
+                    if (!t.show || !t.val) return;
+
+                    ctx.save();
+                    const weight = key === 'price' ? 900 : 700;
+                    const fontFamily = t.font || 'Montserrat';
+                    ctx.font = `${weight} ${t.size}px "${fontFamily}", sans-serif`;
+
+                    const spacing = Number(t.spacing || 0);
+                    const { width: textW, ascent, descent } = measureTrackedText(ctx, t.val, spacing);
+                    const visualH = ascent + descent;
+
+                    const centerX = (t.x / 100) * W;
+                    const centerY = (t.y / 100) * H;
+                    const isHighlighted = t.bg && t.bg !== 'transparent';
+
+                    if (isHighlighted) {
+                        const padX = Math.max(22, Math.round(t.size * 1.15));
+                        const padY = Math.max(12, Math.round(t.size * 0.58));
+                        const boxW = textW + padX * 2;
+                        const boxH = visualH + padY * 2;
+                        const boxX = centerX - boxW / 2;
+                        const boxY = centerY - boxH / 2;
+
+                        ctx.save();
+                        if (t.shadow > 0) {
+                            ctx.shadowColor = 'rgba(0,0,0,0.45)';
+                            ctx.shadowBlur = t.shadow;
+                            ctx.shadowOffsetY = 6;
+                        }
+                        ctx.fillStyle = t.bg;
+                        drawRoundedRect(ctx, boxX, boxY, boxW, boxH, 10);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+
+                    ctx.save();
+                    if (!isHighlighted && t.shadow > 0) {
+                        ctx.shadowColor = 'rgba(0,0,0,0.85)';
+                        ctx.shadowBlur = t.shadow;
+                        ctx.shadowOffsetY = 4;
+                    }
+                    ctx.fillStyle = t.color;
+                    const baselineY = centerY + (ascent - descent) / 2;
+                    fillTrackedText(ctx, t.val, centerX, baselineY, spacing, 'center');
+                    ctx.restore();
+
+                    ctx.restore();
+                });
+
+                const isPolaroid = settings.layout === 'polaroid';
+                if (socials.show) {
+                    ctx.save();
+                    const sSize = Number(socials.size || 24);
+                    const gap = 14;
+                    const activeIcons = [];
+                    if (socials.insta) activeIcons.push('insta');
+                    if (socials.tiktok) activeIcons.push('tiktok');
+                    if (socials.fb) activeIcons.push('fb');
+
+                    const handleFontSize = Math.round(sSize * 0.85);
+                    ctx.font = `700 ${handleFontSize}px "Montserrat", sans-serif`;
+                    const handleMetrics = socials.handle ? measureTrackedText(ctx, socials.handle, 0.5) : { width: 0, ascent: 0, descent: 0 };
+
+                    let totalRowW = activeIcons.length * sSize;
+                    if (activeIcons.length > 1) totalRowW += (activeIcons.length - 1) * gap;
+                    if (socials.handle) {
+                        if (activeIcons.length > 0) totalRowW += gap + 4;
+                        totalRowW += handleMetrics.width;
+                    }
+
+                    const rowCenterX = (socials.x / 100) * W;
+                    const rowCenterY = (socials.y / 100) * H;
+                    let cursorX = rowCenterX - totalRowW / 2;
+
+                    if (!isPolaroid && settings.layout !== 'modern') {
+                        ctx.shadowColor = 'rgba(0,0,0,0.85)';
+                        ctx.shadowBlur = 12;
+                        ctx.shadowOffsetY = 3;
+                    }
+
+                    activeIcons.forEach((iconType) => {
+                        if (iconType === 'insta') drawInstaIconCanvas(ctx, cursorX, rowCenterY, sSize, socials.color);
+                        if (iconType === 'tiktok') drawTiktokIconCanvas(ctx, cursorX, rowCenterY, sSize, socials.color);
+                        if (iconType === 'fb') drawFbIconCanvas(ctx, cursorX, rowCenterY, sSize, socials.color);
+                        cursorX += sSize + gap;
+                    });
+
+                    if (socials.handle) {
+                        if (activeIcons.length > 0) cursorX += 4;
+                        ctx.fillStyle = socials.color;
+                        const handleBaselineY = rowCenterY + (handleMetrics.ascent - handleMetrics.descent) / 2;
+                        fillTrackedText(ctx, socials.handle, cursorX, handleBaselineY, 0.5, 'left');
+                    }
+
+                    ctx.restore();
+                }
+
+                if (settings.showAgentName || settings.showBrokerage) {
+                    ctx.save();
+                    const brandLeftX = 48;
+                    const brandBottomY = H - (isPolaroid ? 42 : 48);
+
+                    if (!isPolaroid) {
+                        ctx.shadowColor = 'rgba(0,0,0,0.85)';
+                        ctx.shadowBlur = 15;
+                        ctx.shadowOffsetY = 4;
+                    }
+
+                    const agentHeight = settings.showAgentName ? 32 : 0;
+                    const brokHeight = settings.showBrokerage ? 20 : 0;
+                    const gapY = (settings.showAgentName && settings.showBrokerage) ? 8 : 0;
+                    const totalBrandH = agentHeight + brokHeight + gapY;
+                    const blockCenterY = brandBottomY - totalBrandH / 2;
+
+                    ctx.fillStyle = isPolaroid ? '#ef4444' : texts.status.color;
+                    ctx.fillRect(brandLeftX, blockCenterY - 2, 56, 4);
+
+                    const textStartX = brandLeftX + 56 + 20;
+                    let currentTopY = brandBottomY - totalBrandH;
+
+                    if (settings.showAgentName) {
+                        ctx.font = `900 30px "Inter", sans-serif`;
+                        ctx.fillStyle = isPolaroid ? '#0f172a' : '#ffffff';
+                        const m = measureTrackedText(ctx, settings.agentName, -0.5);
+                        fillTrackedText(ctx, settings.agentName, textStartX, currentTopY + m.ascent, -0.5, 'left');
+                        currentTopY += agentHeight + gapY;
+                    }
+
+                    if (settings.showBrokerage) {
+                        ctx.font = `800 18px "Montserrat", sans-serif`;
+                        ctx.fillStyle = isPolaroid ? '#475569' : (texts.status.bg !== 'transparent' ? '#cbd5e1' : texts.status.color);
+                        const m = measureTrackedText(ctx, settings.brokerage, 3.5);
+                        fillTrackedText(ctx, settings.brokerage, textStartX, currentTopY + m.ascent, 3.5, 'left');
+                    }
+
+                    ctx.restore();
+                }
+
+                if (badges.eho || badges.realtor) {
+                    ctx.save();
+                    const bSize = 50 * (badges.badgeZoom / 100);
+                    const bGap = Math.round(bSize * 0.45);
+                    const count = (badges.eho ? 1 : 0) + (badges.realtor ? 1 : 0);
+                    const totalBW = count * bSize + (count > 1 ? bGap : 0);
+
+                    const bCenterX = (badges.badgeX / 100) * W;
+                    const bCenterY = (badges.badgeY / 100) * H;
+                    let bCursorX = bCenterX - totalBW / 2;
+                    const bTopY = bCenterY - bSize / 2;
+
+                    if (badges.eho) {
+                        drawEHOBadgeCanvas(ctx, bCursorX, bTopY, bSize, badges.color);
+                        bCursorX += bSize + bGap;
+                    }
+                    if (badges.realtor) {
+                        drawRealtorBadgeCanvas(ctx, bCursorX, bTopY, bSize, badges.color);
+                    }
+                    ctx.restore();
+                }
+
+                if (media.showLogo && logoImageObjRef.current) {
+                    const lgImg = logoImageObjRef.current;
+                    const maxLgH = 100 * (media.logoZoom / 100);
+                    const maxLgW = 300 * (media.logoZoom / 100);
+                    const lgRatio = lgImg.width / lgImg.height;
+
+                    let finalW = maxLgW;
+                    let finalH = finalW / lgRatio;
+                    if (finalH > maxLgH) {
+                        finalH = maxLgH;
+                        finalW = finalH * lgRatio;
+                    }
+
+                    const lgCenterX = (media.logoX / 100) * W;
+                    const lgCenterY = (media.logoY / 100) * H;
+                    ctx.save();
+                    ctx.drawImage(lgImg, lgCenterX - finalW / 2, lgCenterY - finalH / 2, finalW, finalH);
+                    ctx.restore();
+                }
+
+                ctx.restore();
+            }, [texts, settings, overlay, media, badges, socials, imageLoadTick, fontsReadyTick]);
+
+            useEffect(() => {
+                if (previewCanvasRef.current) {
+                    renderSceneToCanvas(previewCanvasRef.current, 1);
+                }
+            }, [renderSceneToCanvas]);
+
+            const applyTemplate = (key) => {
+                const preset = PRESETS[key];
+                setSettings(s => ({ ...s, layout: key }));
+                setOverlay({ color: preset.overlayColor, opacity: preset.overlayOpacity, type: preset.overlayType });
+                setBadges(b => ({ ...b, color: preset.badgeColor || '#ffffff' }));
+                setSocials(s => ({
+                    ...s,
+                    color: preset.socialsColor || '#ffffff',
+                    x: preset.socialsPos ? preset.socialsPos.x : 50,
+                    y: preset.socialsPos ? preset.socialsPos.y : 95
+                }));
+                setTexts(prev => {
+                    const newTexts = { ...prev };
+                    Object.keys(preset.texts).forEach(t => {
+                        newTexts[t] = { ...newTexts[t], ...preset.texts[t] };
+                    });
+                    return newTexts;
+                });
+            };
+
+            const saveCustomTemplate = () => {
+                const name = prompt("Enter a name for your template (e.g., 'My Brand Layout'):");
+                if(!name) return;
+                const newTpl = {
+                    id: Date.now().toString(), name,
+                    settings: { ...settings }, texts: JSON.parse(JSON.stringify(texts)),
+                    badges: { ...badges }, mediaConfig: { ...media, bgSrc:'', agentSrc:'', logoSrc:'' },
+                    socials: { ...socials }, overlay: { ...overlay }
+                };
+                const updated = [...savedTemplates, newTpl];
+                setSavedTemplates(updated);
+                localStorage.setItem('progen_saved_templates_v19', JSON.stringify(updated));
+            };
+
+            const loadCustomTemplate = (tpl) => {
+                setSettings(tpl.settings);
+                setTexts(tpl.texts);
+                setBadges(tpl.badges);
+                if(tpl.overlay) setOverlay(tpl.overlay);
+                if(tpl.socials) setSocials(tpl.socials);
+                setMedia(m => ({
+                    ...m,
+                    bgZoom: tpl.mediaConfig.bgZoom, bgX: tpl.mediaConfig.bgX, bgY: tpl.mediaConfig.bgY,
+                    agentZoom: tpl.mediaConfig.agentZoom, agentX: tpl.mediaConfig.agentX, agentY: tpl.mediaConfig.agentY, showAgent: tpl.mediaConfig.showAgent,
+                    logoZoom: tpl.mediaConfig.logoZoom, logoX: tpl.mediaConfig.logoX, logoY: tpl.mediaConfig.logoY, showLogo: tpl.mediaConfig.showLogo
+                }));
+            };
+
+            const deleteCustomTemplate = (id) => {
+                const updated = savedTemplates.filter(t => t.id !== id);
+                setSavedTemplates(updated);
+                localStorage.setItem('progen_saved_templates_v19', JSON.stringify(updated));
+            };
+
+            const updateText = (el, key, val) => {
+                setTexts(prev => ({ ...prev, [el]: { ...prev[el], [key]: val } }));
+            };
+
+            const handleUpload = (e, key) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        setMedia(p => ({ ...p, [key]: ev.target.result }));
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const downloadImage = async () => {
+                setIsExporting(true);
+                try {
+                    if (document.fonts && document.fonts.ready) {
+                        await document.fonts.ready;
+                    }
+                    const exportCanvas = document.createElement('canvas');
+                    renderSceneToCanvas(exportCanvas, 3);
+
+                    const dataUrl = exportCanvas.toDataURL('image/png', 1.0);
+                    const link = document.createElement('a');
+                    link.download = `ProGen_${texts.status.val.replace(/[^a-zA-Z0-9]/g, '_')}_4K_UHD.png`;
+                    link.href = dataUrl;
+                    link.click();
+                } catch (error) {
+                    console.error("Export Error:", error);
+                    alert("Export failed! Please ensure uploaded images are valid JPG/PNG files.");
+                } finally {
+                    setIsExporting(false);
+                }
+            };
+
+            const currentScale = (settings.size === 'post' ? previewScale : previewScale * 0.68) * userZoom;
+
+            // VIP PIN GATE UI
+            if (!isAuthenticated) {
+                return (
+                    <div className="flex items-center justify-center h-screen w-screen bg-slate-950 p-4 fade-in">
+                        <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2rem] shadow-2xl max-w-md w-full text-center">
+                            <div className="w-16 h-16 bg-blue-600 rounded-2xl mx-auto mb-6 flex items-center justify-center text-white font-black text-2xl shadow-[0_0_15px_rgba(37,99,235,0.5)]">P</div>
+                            <h2 className="text-2xl font-black tracking-tight text-white mb-2">Welcome to ProGen V19</h2>
+                            <p className="text-slate-400 mb-8 text-sm">Enter your VIP access code from your Etsy download PDF to unlock the engine.</p>
+                            
+                            <form onSubmit={(e) => {
+                                e.preventDefault();
+                                if(pinInput === CORRECT_PIN) setIsAuthenticated(true);
+                                else setPinError(true);
+                            }}>
+                                <input 
+                                    type="password" 
+                                    value={pinInput}
+                                    onChange={(e) => { setPinInput(e.target.value); setPinError(false); }}
+                                    placeholder="Enter Access PIN" 
+                                    className={`w-full p-4 rounded-xl bg-slate-950 border-2 focus:outline-none font-bold text-center tracking-widest text-white mb-4 transition ${pinError ? 'border-red-500 text-red-500' : 'border-slate-800 focus:border-blue-500'}`}
+                                />
+                                {pinError && <p className="text-red-500 text-xs font-bold mb-4">Incorrect PIN. Please check your Etsy PDF.</p>}
+                                <button type="submit" className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-lg rounded-xl transition shadow-[0_0_15px_rgba(37,99,235,0.4)] cursor-pointer">Unlock Engine</button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className="flex h-screen w-full text-slate-200 fade-in">
+                    <div className="w-[450px] bg-slate-900 border-r border-slate-800 flex flex-col z-10 shadow-2xl flex-shrink-0">
+                        <div className="p-6 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-2xl font-black tracking-tight text-white">PROGEN <span className="text-blue-500">V19</span></h1>
+                                    <span className="bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">100% WYSIWYG</span>
+                                </div>
+                                <p className="text-[10px] text-blue-400 font-bold tracking-widest uppercase mt-1">Native 4K Canvas Engine</p>
+                            </div>
+                            <button onClick={downloadImage} disabled={isExporting} className="bg-blue-600 hover:bg-blue-500 text-white px-5 py-3 rounded-lg font-bold text-sm transition shadow-lg shadow-blue-500/20 disabled:opacity-50 flex items-center gap-2 cursor-pointer">
+                                {isExporting ? '⏳ Exporting...' : '⬇ Export 4K UHD'}
+                            </button>
+                        </div>
+
+                        <div className="flex border-b border-slate-800 bg-slate-900 overflow-x-auto">
+                            {['templates', 'content', 'text_tuning', 'media', 'socials'].map(tab => (
+                                <button key={tab} onClick={() => setActiveMenu(tab)} className={`flex-1 min-w-[80px] py-4 text-[10px] font-bold uppercase tracking-wider transition cursor-pointer ${activeMenu === tab ? 'text-blue-400 border-b-2 border-blue-400 bg-slate-800' : 'text-slate-500 hover:text-slate-300'}`}>
+                                    {tab.replace('_', ' ')}
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-4">
+                            {activeMenu === 'templates' && (
+                                <div className="space-y-6">
+                                    <div className="flex gap-2">
+                                        <button className={`flex-1 py-3 text-xs font-bold rounded-md cursor-pointer ${settings.size==='post'?'bg-blue-600 text-white':'bg-slate-800 text-slate-400'}`} onClick={()=>setSettings(s=>({...s, size:'post'}))}>Square Post (1:1)</button>
+                                        <button className={`flex-1 py-3 text-xs font-bold rounded-md cursor-pointer ${settings.size==='story'?'bg-blue-600 text-white':'bg-slate-800 text-slate-400'}`} onClick={()=>setSettings(s=>({...s, size:'story'}))}>Insta Story (9:16)</button>
+                                    </div>
+                                    <div className="panel-section border-blue-500/30">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-xs font-bold text-blue-300 uppercase">My Saved Templates</h3>
+                                            <button onClick={saveCustomTemplate} className="text-[10px] bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded font-bold transition cursor-pointer">+ Save Current</button>
+                                        </div>
+                                        {savedTemplates.length === 0 ? (
+                                            <p className="text-[11px] text-slate-500 italic">No saved templates yet. Customize a design and click Save.</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {savedTemplates.map(tpl => (
+                                                    <div key={tpl.id} className="flex justify-between items-center bg-slate-800 p-2.5 rounded-lg border border-slate-700">
+                                                        <span className="text-xs font-bold text-white">{tpl.name}</span>
+                                                        <div className="flex gap-2">
+                                                            <button onClick={()=>loadCustomTemplate(tpl)} className="text-[10px] bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded font-bold cursor-pointer">Apply</button>
+                                                            <button onClick={()=>deleteCustomTemplate(tpl.id)} className="text-[10px] bg-slate-700 text-red-400 hover:text-red-300 px-2 py-1 rounded cursor-pointer">Del</button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xs font-bold text-slate-400 uppercase mb-3">Master Layouts (8)</h3>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {Object.keys(PRESETS).map(key => (
+                                                <button key={key} onClick={() => applyTemplate(key)} className={`p-4 rounded-xl text-left border-2 transition cursor-pointer ${settings.layout === key ? 'border-blue-500 bg-slate-800' : 'border-slate-700 bg-slate-900 hover:border-slate-500'}`}>
+                                                    <h3 className="text-white font-bold text-sm">{PRESETS[key].name}</h3>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeMenu === 'content' && (
+                                <div className="space-y-4">
+                                    <div className="panel-section space-y-4">
+                                        {Object.keys(texts).map(key => (
+                                            <div key={key}>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="label-dark m-0">{key}</label>
+                                                    <input type="checkbox" checked={texts[key].show} onChange={e => updateText(key, 'show', e.target.checked)} className="cursor-pointer" />
+                                                </div>
+                                                <input className="input-dark" value={texts[key].val} onChange={e => updateText(key, 'val', e.target.value)} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="panel-section">
+                                        <h3 className="text-xs font-bold text-slate-300 uppercase mb-4">Bottom Left Branding</h3>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="label-dark m-0">Agent Name</label>
+                                                    <input type="checkbox" checked={settings.showAgentName} onChange={e => setSettings(s=>({...s, showAgentName: e.target.checked}))} className="cursor-pointer" />
+                                                </div>
+                                                <input className="input-dark" value={settings.agentName} onChange={e => setSettings(s=>({...s, agentName: e.target.value}))} />
+                                            </div>
+                                            <div>
+                                                <div className="flex justify-between items-center mb-1">
+                                                    <label className="label-dark m-0">Brokerage</label>
+                                                    <input type="checkbox" checked={settings.showBrokerage} onChange={e => setSettings(s=>({...s, showBrokerage: e.target.checked}))} className="cursor-pointer" />
+                                                </div>
+                                                <input className="input-dark" value={settings.brokerage} onChange={e => setSettings(s=>({...s, brokerage: e.target.value}))} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeMenu === 'text_tuning' && (
+                                <div className="space-y-4">
+                                    <div className="flex gap-2 overflow-x-auto pb-2">
+                                        {Object.keys(texts).map(key => (
+                                            <button key={key} onClick={() => setActiveTextEdit(key)} className={`px-4 py-2 rounded text-xs font-bold uppercase whitespace-nowrap cursor-pointer ${activeTextEdit === key ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'}`}>
+                                                {key}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    {activeTextEdit && (
+                                        <div className="panel-section border-blue-500/30 bg-slate-800/50">
+                                            <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest">{activeTextEdit} Style</h3>
+                                            
+                                            <div className="mb-5">
+                                                <label className="label-dark">Font Family</label>
+                                                <select className="input-dark" value={texts[activeTextEdit].font || 'Montserrat'} onChange={e => updateText(activeTextEdit, 'font', e.target.value)}>
+                                                    <option value="Montserrat">Montserrat (Modern Bold)</option>
+                                                    <option value="Playfair Display">Playfair Display (Luxury Serif)</option>
+                                                    <option value="Oswald">Oswald (Tall Impact)</option>
+                                                    <option value="Inter">Inter (Clean Minimal)</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4 mb-6">
+                                                <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-lg border border-slate-700">
+                                                    <label className="label-dark m-0">Text Color</label>
+                                                    <input type="color" className="color-picker" value={texts[activeTextEdit].color} onChange={e => updateText(activeTextEdit, 'color', e.target.value)} />
+                                                </div>
+                                                <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-lg border border-slate-700">
+                                                    <label className="label-dark m-0">Tag Box</label>
+                                                    <div className="flex items-center gap-2">
+                                                        <input type="checkbox" checked={texts[activeTextEdit].bg !== 'transparent'} onChange={e => updateText(activeTextEdit, 'bg', e.target.checked ? '#0f172a' : 'transparent')} className="cursor-pointer" />
+                                                        {texts[activeTextEdit].bg !== 'transparent' && (
+                                                            <input type="color" className="color-picker w-6 h-6" value={texts[activeTextEdit].bg.startsWith('#') ? texts[activeTextEdit].bg : '#0f172a'} onChange={e => updateText(activeTextEdit, 'bg', e.target.value)} />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div className="mb-6">
+                                                <label className="label-dark flex justify-between"><span>Font Size</span> <span>{texts[activeTextEdit].size}px</span></label>
+                                                <input type="range" min="12" max="220" value={texts[activeTextEdit].size} onChange={e => updateText(activeTextEdit, 'size', Number(e.target.value))} className="slider-sm" />
+                                            </div>
+                                            <div className="mb-6">
+                                                <label className="label-dark flex justify-between"><span>Letter Spacing</span> <span>{texts[activeTextEdit].spacing || 0}px</span></label>
+                                                <input type="range" min="0" max="25" value={texts[activeTextEdit].spacing || 0} onChange={e => updateText(activeTextEdit, 'spacing', Number(e.target.value))} className="slider-sm" />
+                                            </div>
+                                            
+                                            <div className="mb-6 grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="label-dark flex justify-between"><span>Left/Right (X)</span> <span>{texts[activeTextEdit].x}%</span></label>
+                                                    <input type="range" min="5" max="95" value={texts[activeTextEdit].x} onChange={e => updateText(activeTextEdit, 'x', Number(e.target.value))} className="slider-sm" />
+                                                </div>
+                                                <div>
+                                                    <label className="label-dark flex justify-between"><span>Up/Down (Y)</span> <span>{texts[activeTextEdit].y}%</span></label>
+                                                    <input type="range" min="5" max="95" value={texts[activeTextEdit].y} onChange={e => updateText(activeTextEdit, 'y', Number(e.target.value))} className="slider-sm" />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <label className="label-dark flex justify-between"><span>Text Shadow / Glow</span> <span>{texts[activeTextEdit].shadow}px</span></label>
+                                                <input type="range" min="0" max="40" value={texts[activeTextEdit].shadow} onChange={e => updateText(activeTextEdit, 'shadow', Number(e.target.value))} className="slider-sm" />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {activeMenu === 'media' && (
+                                <div className="space-y-4">
+                                    <div className="panel-section">
+                                        <div className="mb-4">
+                                            <label className="label-dark text-blue-400 mb-1">Property Image</label>
+                                            <input type="file" accept="image/*" onChange={e => handleUpload(e, 'bgSrc')} className="input-dark text-xs" />
+                                            <div className="mt-4 space-y-4">
+                                                <div><label className="label-dark flex justify-between"><span>Size (Zoom)</span><span>{media.bgZoom}%</span></label><input type="range" min="100" max="250" value={media.bgZoom} onChange={e => setMedia(m=>({...m, bgZoom: Number(e.target.value)}))} className="slider-sm" /></div>
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div><label className="label-dark flex justify-between"><span>Pan Left/Right</span><span>{media.bgX}%</span></label><input type="range" min="0" max="100" value={media.bgX} onChange={e => setMedia(m=>({...m, bgX: Number(e.target.value)}))} className="slider-sm" /></div>
+                                                    <div><label className="label-dark flex justify-between"><span>Pan Up/Down</span><span>{media.bgY}%</span></label><input type="range" min="0" max="100" value={media.bgY} onChange={e => setMedia(m=>({...m, bgY: Number(e.target.value)}))} className="slider-sm" /></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="panel-section bg-slate-800/70 border-blue-500/20">
+                                        <h3 className="text-xs font-bold text-white uppercase mb-4">Background Overlay / Filter</h3>
+                                        <div className="grid grid-cols-2 gap-4 mb-4">
+                                            <div>
+                                                <label className="label-dark">Overlay Style</label>
+                                                <select className="input-dark" value={overlay.type} onChange={e => setOverlay(o=>({...o, type: e.target.value}))}>
+                                                    <option value="none">None</option>
+                                                    <option value="solid">Solid Color Tint</option>
+                                                    <option value="gradient">Bottom Dark Gradient</option>
+                                                    <option value="vibrant">Vibrant Dual Gradient</option>
+                                                </select>
+                                            </div>
+                                            <div className="flex items-center justify-between mt-5 bg-slate-900 px-3 py-2 rounded-lg border border-slate-700">
+                                                <label className="label-dark m-0">Color Tone</label>
+                                                <input type="color" className="color-picker" value={overlay.color} onChange={e => setOverlay(o=>({...o, color: e.target.value}))} />
+                                            </div>
+                                        </div>
+                                        <div><label className="label-dark flex justify-between"><span>Overlay Opacity (Darkness)</span><span>{overlay.opacity}%</span></label><input type="range" min="0" max="95" value={overlay.opacity} onChange={e => setOverlay(o=>({...o, opacity: Number(e.target.value)}))} className="slider-sm" /></div>
+                                    </div>
+                                    
+                                    <div className="panel-section">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="label-dark text-blue-400 m-0">Agent Cutout (Transparent PNG)</label>
+                                            <input type="checkbox" checked={media.showAgent} onChange={e => setMedia(m=>({...m, showAgent: e.target.checked}))} className="cursor-pointer" />
+                                        </div>
+                                        <input type="file" accept="image/png" onChange={e => { handleUpload(e, 'agentSrc'); setMedia(m=>({...m, showAgent: true})); }} className="input-dark text-xs" />
+                                        {media.showAgent && (
+                                            <div className="grid grid-cols-3 gap-2 mt-4">
+                                                <div><label className="label-dark">Size</label><input type="range" min="30" max="180" value={media.agentZoom} onChange={e => setMedia(m=>({...m, agentZoom: Number(e.target.value)}))} className="slider-sm" /></div>
+                                                <div><label className="label-dark">L/R</label><input type="range" min="10" max="90" value={media.agentX} onChange={e => setMedia(m=>({...m, agentX: Number(e.target.value)}))} className="slider-sm" /></div>
+                                                <div><label className="label-dark">U/D</label><input type="range" min="-20" max="60" value={media.agentY} onChange={e => setMedia(m=>({...m, agentY: Number(e.target.value)}))} className="slider-sm" /></div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="panel-section">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <label className="label-dark text-blue-400 m-0">Custom Brokerage Logo</label>
+                                            <input type="checkbox" checked={media.showLogo} onChange={e => setMedia(m=>({...m, showLogo: e.target.checked}))} className="cursor-pointer" />
+                                        </div>
+                                        <input type="file" accept="image/*" onChange={e => { handleUpload(e, 'logoSrc'); setMedia(m=>({...m, showLogo: true})); }} className="input-dark text-xs" />
+                                        {media.showLogo && (
+                                            <div className="grid grid-cols-3 gap-2 mt-4">
+                                                <div><label className="label-dark">Size</label><input type="range" min="20" max="200" value={media.logoZoom} onChange={e => setMedia(m=>({...m, logoZoom: Number(e.target.value)}))} className="slider-sm" /></div>
+                                                <div><label className="label-dark">L/R</label><input type="range" min="5" max="95" value={media.logoX} onChange={e => setMedia(m=>({...m, logoX: Number(e.target.value)}))} className="slider-sm" /></div>
+                                                <div><label className="label-dark">U/D</label><input type="range" min="5" max="95" value={media.logoY} onChange={e => setMedia(m=>({...m, logoY: Number(e.target.value)}))} className="slider-sm" /></div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="panel-section">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-xs font-bold text-slate-300 uppercase m-0">Trust Badges</h3>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] text-slate-400 font-bold uppercase">Color</span>
+                                                <input type="color" className="color-picker w-6 h-6" value={badges.color} onChange={e => setBadges(b=>({...b, color: e.target.value}))} />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="flex items-center gap-3 text-sm font-medium cursor-pointer">
+                                                <input type="checkbox" checked={badges.eho} onChange={e=>setBadges(b=>({...b, eho: e.target.checked}))} className="w-4 h-4" />
+                                                Equal Housing Opportunity
+                                            </label>
+                                            <label className="flex items-center gap-3 text-sm font-medium cursor-pointer">
+                                                <input type="checkbox" checked={badges.realtor} onChange={e=>setBadges(b=>({...b, realtor: e.target.checked}))} className="w-4 h-4" />
+                                                REALTOR® Logo
+                                            </label>
+                                        </div>
+                                        <div className="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-700">
+                                            <div><label className="label-dark">Size</label><input type="range" min="40" max="180" value={badges.badgeZoom} onChange={e => setBadges(m=>({...m, badgeZoom: Number(e.target.value)}))} className="slider-sm" /></div>
+                                            <div><label className="label-dark">L/R</label><input type="range" min="5" max="95" value={badges.badgeX} onChange={e => setBadges(m=>({...m, badgeX: Number(e.target.value)}))} className="slider-sm" /></div>
+                                            <div><label className="label-dark">U/D</label><input type="range" min="5" max="95" value={badges.badgeY} onChange={e => setBadges(m=>({...m, badgeY: Number(e.target.value)}))} className="slider-sm" /></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeMenu === 'socials' && (
+                                <div className="space-y-4">
+                                    <div className="panel-section">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-xs font-bold text-blue-300 uppercase">Show Social Handles</h3>
+                                            <input type="checkbox" checked={socials.show} onChange={e => setSocials(s=>({...s, show: e.target.checked}))} className="cursor-pointer" />
+                                        </div>
+                                        {socials.show && (
+                                            <>
+                                                <div className="space-y-3 mb-6">
+                                                    <label className="flex items-center gap-3 text-sm font-medium cursor-pointer">
+                                                        <input type="checkbox" checked={socials.insta} onChange={e=>setSocials(s=>({...s, insta: e.target.checked}))} className="w-4 h-4" /> Instagram Icon
+                                                    </label>
+                                                    <label className="flex items-center gap-3 text-sm font-medium cursor-pointer">
+                                                        <input type="checkbox" checked={socials.tiktok} onChange={e=>setSocials(s=>({...s, tiktok: e.target.checked}))} className="w-4 h-4" /> TikTok Icon
+                                                    </label>
+                                                    <label className="flex items-center gap-3 text-sm font-medium cursor-pointer">
+                                                        <input type="checkbox" checked={socials.fb} onChange={e=>setSocials(s=>({...s, fb: e.target.checked}))} className="w-4 h-4" /> Facebook Icon
+                                                    </label>
+                                                </div>
+                                                
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="label-dark">Handle / Username</label>
+                                                        <input className="input-dark" value={socials.handle} onChange={e => setSocials(s=>({...s, handle: e.target.value}))} />
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <label className="label-dark m-0">Icon & Text Color</label>
+                                                        <input type="color" className="color-picker" value={socials.color} onChange={e => setSocials(s=>({...s, color: e.target.value}))} />
+                                                    </div>
+                                                    <div>
+                                                        <label className="label-dark flex justify-between"><span>Size</span><span>{socials.size}px</span></label>
+                                                        <input type="range" min="14" max="60" value={socials.size} onChange={e => setSocials(s=>({...s, size: Number(e.target.value)}))} className="slider-sm" />
+                                                    </div>
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div><label className="label-dark flex justify-between"><span>Left/Right</span><span>{socials.x}%</span></label><input type="range" min="10" max="90" value={socials.x} onChange={e => setSocials(s=>({...s, x: Number(e.target.value)}))} className="slider-sm" /></div>
+                                                        <div><label className="label-dark flex justify-between"><span>Up/Down</span><span>{socials.y}%</span></label><input type="range" min="5" max="98" value={socials.y} onChange={e => setSocials(s=>({...s, y: Number(e.target.value)}))} className="slider-sm" /></div>
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                        </div>
+                    </div>
+
+                    <div className="flex-1 bg-slate-950 flex justify-center items-center overflow-hidden p-8 relative" style={{ backgroundImage: 'radial-gradient(#1e293b 1px, transparent 1px)', backgroundSize: '24px 24px' }}>
+                        
+                        <div className="zoom-controls">
+                            <button onClick={() => setUserZoom(z => Math.max(0.4, Number((z - 0.1).toFixed(2))))} className="text-white hover:text-blue-400 font-black text-xl px-2 leading-none cursor-pointer">-</button>
+                            <span className="text-[11px] font-bold text-slate-200 uppercase tracking-widest min-w-[110px] text-center">Zoom {Math.round(userZoom * 100)}%</span>
+                            <button onClick={() => setUserZoom(z => Math.min(2.5, Number((z + 0.1).toFixed(2))))} className="text-white hover:text-blue-400 font-black text-xl px-2 leading-none cursor-pointer">+</button>
+                            <button onClick={() => setUserZoom(1.1)} className="text-slate-400 hover:text-white text-[10px] uppercase font-bold ml-1 underline cursor-pointer">Reset</button>
+                        </div>
+
+                        <div style={{ 
+                            display: 'flex', 
+                            justifyContent: 'center', 
+                            alignItems: 'center',
+                            transform: `scale(${currentScale})`, 
+                            transformOrigin: 'center center', 
+                            transition: 'transform 0.12s ease-out',
+                            boxShadow: '0 25px 60px -15px rgba(0,0,0,0.75)'
+                        }}>
+                            <canvas 
+                                ref={previewCanvasRef} 
+                                style={{ display: 'block', backgroundColor: '#ffffff' }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
